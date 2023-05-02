@@ -1,6 +1,7 @@
 from PySide6.QtWidgets import QMainWindow, QLineEdit, QVBoxLayout, QHBoxLayout
-from PySide6.QtWidgets import QFrame, QLabel, QPushButton,  QStackedWidget, QTextEdit
+from PySide6.QtWidgets import QFrame, QLabel, QPushButton,  QStackedWidget, QTextEdit, QMessageBox
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QCloseEvent
 from collection import Collection
 from fonts import heading_font
 
@@ -11,6 +12,8 @@ class MainWindow(QMainWindow):
         self.app = app
         self.my_collection = Collection()
         self.current_index = None
+
+        self.close_ok = False
 
         #  ------------------------------ Menu Bar ------------------------------
         self.menu_bar = self.menuBar()
@@ -36,7 +39,6 @@ class MainWindow(QMainWindow):
         delete_action.triggered.connect(self.delete_endeavor)
 
         #  ------------------------------ Stacked Widget ------------------------------
-
         self.my_stacked = QStackedWidget()
         self.setCentralWidget(self.my_stacked)
 
@@ -94,20 +96,22 @@ class MainWindow(QMainWindow):
         self.text_edit.setAlignment(Qt.AlignCenter)
         self.text_layout.addWidget(self.text_edit)
 
-    #  ------------------------------ MainWindow Methods ------------------------------
-
-    #  ------------------------------ Non-action Methods ------------------------------
-    def take_input(self):
-        self.my_collection.create_endeavor(self.my_input.text())
-        self.update_endeavors_index()
-        self.reset_home()
-
-    def update_endeavors_index(self):
-        self.endeavors_menu.clear()
-        for index, item in enumerate(self.my_collection.collection):
-            selection = self.endeavors_menu.addAction(item.big_idea)
-            selection.triggered.connect(self.open_endeavor)
-            item.index = index
+    #  ------------------------------ Event Methods ------------------------------
+    def closeEvent(self, event: QCloseEvent):
+        if self.close_ok:
+            pass
+        else:
+            event.ignore()
+            dlg = QMessageBox(self)
+            dlg.setWindowTitle("Every Good Endeavor")
+            dlg.setFixedSize(300, 150)
+            dlg.setText("Save to the database?")
+            dlg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+            clicked_btn = dlg.exec_()
+            if clicked_btn == QMessageBox.Yes:
+                self.save_to_db()
+            self.close_ok = True
+            self.app.quit()
 
     #  ------------------------------ File Actions ------------------------------
     def reset_home(self):
@@ -137,6 +141,26 @@ class MainWindow(QMainWindow):
         self.reset_home()
 
     def delete_endeavor(self):
-        self.my_collection.delete_endeavor(self.current_index)
+        dlg = QMessageBox(self)
+        dlg.setWindowTitle("QDialog")
+        dlg.setFixedSize(300, 150)
+        dlg.setText("Are you sure?")
+        dlg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        clicked_btn = dlg.exec_()
+        if clicked_btn == QMessageBox.Yes:
+            self.my_collection.delete_endeavor(self.current_index)
+            self.update_endeavors_index()
+            self.reset_home()
+
+    #  ------------------------------ Additional Methods ------------------------------
+    def take_input(self):
+        self.my_collection.create_endeavor(self.my_input.text())
         self.update_endeavors_index()
         self.reset_home()
+
+    def update_endeavors_index(self):
+        self.endeavors_menu.clear()
+        for index, item in enumerate(self.my_collection.collection):
+            selection = self.endeavors_menu.addAction(item.big_idea)
+            selection.triggered.connect(self.open_endeavor)
+            item.index = index
